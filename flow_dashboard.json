@@ -1,0 +1,299 @@
+[
+    {
+        "id": "tab_husky_v26",
+        "type": "tab",
+        "label": "Husky Robot V26",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "group_stats",
+        "type": "ui_group",
+        "name": "Estatísticas em Tempo Real",
+        "tab": "tab_home_v26",
+        "order": 1,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "group_maps",
+        "type": "ui_group",
+        "name": "Visualização de Navegação",
+        "tab": "tab_home_v26",
+        "order": 2,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "mqtt_telemetria",
+        "type": "mqtt in",
+        "z": "tab_husky_v26",
+        "name": "Recebe Telemetria",
+        "topic": "aspirador/telemetria",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "broker_local",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 140,
+        "wires": [
+            [
+                "func_distribuidor"
+            ]
+        ]
+    },
+    {
+        "id": "mqtt_imagem",
+        "type": "mqtt in",
+        "z": "tab_husky_v26",
+        "name": "Recebe Imagem Mapa",
+        "topic": "aspirador/mapa_imagem",
+        "qos": "0",
+        "datatype": "auto",
+        "broker": "broker_local",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 160,
+        "y": 420,
+        "wires": [
+            [
+                "ui_template_imagem"
+            ]
+        ]
+    },
+    {
+        "id": "func_distribuidor",
+        "type": "function",
+        "z": "tab_husky_v26",
+        "name": "Distribuidor de Dados",
+        "func": "var dados = msg.payload;\n\n// 1. Dados para os Widgets Padrão\nvar msgModo = { payload: dados.modo };\nvar msgArea = { payload: dados.area_m2, topic: \"Área Coberta\" };\nvar msgEnergia = { payload: dados.energia };\n\n// 2. Dados para o Canvas (Mapa Tempo Real)\n// Envia apenas se tiver posição válida\nvar msgCanvas = null;\nif (dados.posicao && dados.posicao.x !== undefined) {\n    msgCanvas = {\n        payload: {\n            x: parseFloat(dados.posicao.x),\n            y: parseFloat(dados.posicao.y)\n        }\n    };\n}\n\nreturn [msgModo, msgArea, msgEnergia, msgCanvas];",
+        "outputs": 4,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 140,
+        "wires": [
+            [
+                "ui_text_modo"
+            ],
+            [
+                "ui_chart_area"
+            ],
+            [
+                "ui_gauge_energia",
+                "ui_text_eficiencia"
+            ],
+            [
+                "ui_template_canvas"
+            ]
+        ]
+    },
+    {
+        "id": "ui_text_modo",
+        "type": "ui_text",
+        "z": "tab_husky_v26",
+        "group": "group_stats",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "name": "",
+        "label": "Modo Atual:",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "x": 670,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "ui_chart_area",
+        "type": "ui_chart",
+        "z": "tab_husky_v26",
+        "name": "Gráfico Área",
+        "group": "group_stats",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "label": "Evolução da Área (m²)",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "0",
+        "ymax": "100",
+        "removeOlder": "5",
+        "removeOlderPoints": "",
+        "removeOlderUnit": "60",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 670,
+        "y": 120,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "ui_gauge_energia",
+        "type": "ui_gauge",
+        "z": "tab_husky_v26",
+        "name": "",
+        "group": "group_stats",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "Energia (J)",
+        "label": "Joules",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "500000",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "className": "",
+        "x": 670,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "ui_text_eficiencia",
+        "type": "function",
+        "z": "tab_husky_v26",
+        "name": "Calc Eficiência",
+        "func": "var energia = msg.payload;\n// Usa variável global ou um valor estimado se area for 0\nvar area = global.get(\"husky_area\") || 1;\nvar result = (energia / area).toFixed(0);\nmsg.payload = result + \" J/m²\";\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 680,
+        "y": 240,
+        "wires": [
+            [
+                "ui_text_eff_display"
+            ]
+        ]
+    },
+    {
+        "id": "ui_text_eff_display",
+        "type": "ui_text",
+        "z": "tab_husky_v26",
+        "group": "group_stats",
+        "order": 4,
+        "width": 0,
+        "height": 0,
+        "name": "",
+        "label": "Eficiência:",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "x": 860,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "ui_template_canvas",
+        "type": "ui_template",
+        "z": "tab_husky_v26",
+        "group": "group_maps",
+        "name": "MAPA 1: Rastreador (Canvas)",
+        "order": 1,
+        "width": "6",
+        "height": "8",
+        "format": "<div style=\"display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;\">\n    <h4 style=\"margin-bottom: 5px;\">Rastreio em Tempo Real</h4>\n    <canvas id=\"mapaCanvasV26\" width=\"300\" height=\"300\" style=\"background-color: #000; border: 2px solid #00FFFF; border-radius: 4px;\"></canvas>\n    <div style=\"color: gray; font-size: 10px; margin-top: 5px;\">Escala: 20x20 metros</div>\n</div>\n\n<script>\n    (function(scope) {\n        setTimeout(function() {\n            const canvas = document.getElementById('mapaCanvasV26');\n            if(!canvas) return;\n            \n            const ctx = canvas.getContext('2d');\n            const mapSize = 300;\n            const realSize = 20; // Arena de -10 a 10 (20 metros)\n            \n            // Função para converter Metros -> Pixels\n            function toPx(val) {\n                // Transforma -10..10 em 0..300\n                return ((val + 10) / realSize) * mapSize;\n            }\n\n            // Desenha grade de fundo (opcional)\n            ctx.strokeStyle = '#222';\n            ctx.lineWidth = 1;\n            ctx.beginPath();\n            for(let i=0; i<=300; i+=30) {\n                ctx.moveTo(i, 0); ctx.lineTo(i, 300);\n                ctx.moveTo(0, i); ctx.lineTo(300, i);\n            }\n            ctx.stroke();\n\n            scope.$watch('msg', function(msg) {\n                if (!msg || !msg.payload) return;\n                \n                // Desenha o Robô (Ponto Ciano)\n                const x = toPx(msg.payload.x);\n                const y = toPx(msg.payload.y);\n                \n                // Inverte Y porque no Canvas o 0 é em cima\n                const yInv = mapSize - y;\n\n                ctx.beginPath();\n                ctx.arc(x, yInv, 2, 0, 2 * Math.PI);\n                ctx.fillStyle = '#00FFFF'; // Ciano Brilhante\n                ctx.fill();\n            });\n        }, 100); // Pequeno delay para garantir que o DOM carregou\n    })(scope);\n</script>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 670,
+        "y": 320,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "ui_template_imagem",
+        "type": "ui_template",
+        "z": "tab_husky_v26",
+        "group": "group_maps",
+        "name": "MAPA 2: Completo (Imagem)",
+        "order": 2,
+        "width": "6",
+        "height": "8",
+        "format": "<div style=\"display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;\">\n    <h4 style=\"margin-bottom: 5px;\">Mapa de Calor & Obstáculos</h4>\n    <div style=\"width: 300px; height: 300px; border: 2px solid #FF5500; background: #000; display: flex; align-items: center; justify-content: center;\">\n        <img ng-src=\"data:image/png;base64,{{msg.payload}}\" alt=\"Aguardando Imagem...\" style=\"max-width: 100%; max-height: 100%; object-fit: contain;\">\n    </div>\n    <div style=\"color: gray; font-size: 10px; margin-top: 5px;\">Fonte: Matplotlib (Python)</div>\n</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 440,
+        "y": 420,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "tab_home_v26",
+        "type": "ui_tab",
+        "name": "Husky Dashboard V26",
+        "icon": "dashboard",
+        "order": 1,
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "broker_local",
+        "type": "mqtt-broker",
+        "name": "Localhost",
+        "broker": "localhost",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "sessionExpiry": ""
+    }
+]
