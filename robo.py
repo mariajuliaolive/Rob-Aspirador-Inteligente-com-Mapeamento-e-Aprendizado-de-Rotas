@@ -1,5 +1,3 @@
-
-
 import pybullet as p
 import pybullet_data
 import numpy as np
@@ -14,25 +12,21 @@ import io
 import base64
 import matplotlib.pyplot as plt 
 
-# --- CONFIGURAÇÃO DE MAPA E VISUAL ---
-random.seed(42) # Mude este número para gerar um layout diferente
+random.seed(42) # Arena fixa
+
+# CONFIGURAÇÕES
 MAP_SIZE = 100           
 MAP_METERS = 20.0        
-MAP_FILENAME = "mapa_v27_cheio.pkl"
+MAP_FILENAME = "mapa_comparativo.pkl"
 SIM_STEP = 1.0 / 240.0
-
-# FÍSICA
 FORCE_HUSKY = 15000      
 BASE_SPEED = 25.0        
 TURN_SPEED = 12.0        
-
-# SENSORES
 SENSOR_ANGLES = [-0.6, -0.3, 0.0, 0.3, 0.6]  
 SENSOR_MAX_RANGE = 6.0   
 OBSTACLE_THRESHOLD = 2.5 
-
-# MQTT
 MQTT_BROKER = "localhost"
+
 try:
     import paho.mqtt.client as mqtt
     MQTT_AVAILABLE = True
@@ -40,7 +34,6 @@ except ImportError:
     MQTT_AVAILABLE = False
 
 # --- FUNÇÕES ---
-
 def world_to_cell(pos):
     x, y = pos[0], pos[1]
     i = int(((x + MAP_METERS/2) / MAP_METERS) * MAP_SIZE)
@@ -94,23 +87,18 @@ class RoboComunicador:
     def enviar_imagem(self, mapa, trajetoria):
         if not self.client: return
         try:
-            plt.figure(figsize=(5,5))
+            plt.figure(figsize=(4,4))
             plt.imshow(mapa.T, origin='lower', cmap='hot', interpolation='nearest', vmin=0, vmax=100)
-            
             xs, ys = [], []
             for x, y in trajetoria:
                 i, j = world_to_cell([x, y])
                 xs.append(i); ys.append(j)
             plt.plot(xs, ys, 'c-', linewidth=2)
-            plt.axis('off') 
+            plt.axis('off')
+            plt.tight_layout(pad=0)
             
             buf = io.BytesIO()
             plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0)
-            
-            # --- SALVA NO PC TAMBÉM (OPCIONAL) ---
-            plt.savefig("ultimo_mapa.png", bbox_inches='tight', pad_inches=0)
-            # -------------------------------------
-
             plt.close()
             buf.seek(0)
             img_str = base64.b64encode(buf.getvalue()).decode('utf-8')
@@ -156,15 +144,11 @@ def criar_ambiente_arena():
     wall([10, 0, 1], [0.2, 10.2, 1])
     wall([-10, 0, 1], [0.2, 10.2, 1])
     
-    # --- AQUI VOCÊ CONTROLA A QUANTIDADE ---
-    print("Gerando Arena LOTADA...")
-    quantidade_obstaculos = 20  # <--- MUDE AQUI PARA MAIS OU MENOS (Ex: 5, 20, 50)
-
-    for i in range(quantidade_obstaculos):   
+    print("Gerando Arena Fixa (20 obstáculos)...")
+    for i in range(20):   
         while True:
             pos_x = random.uniform(-8, 8)
             pos_y = random.uniform(-8, 8)
-            # Garante que não nasça em cima do robô
             if math.sqrt((pos_x - (-8))**2 + (pos_y - (-8))**2) > 3.0: break
         
         if random.random() > 0.5:
@@ -175,9 +159,7 @@ def criar_ambiente_arena():
             c = p.createCollisionShape(p.GEOM_CYLINDER, radius=0.3, height=1.0)
             v = p.createVisualShape(p.GEOM_CYLINDER, radius=0.3, length=1.0, rgbaColor=[0.5,random.random(),0.5,1])
             p.createMultiBody(baseMass=0, baseCollisionShapeIndex=c, baseVisualShapeIndex=v, basePosition=[pos_x, pos_y, 0.5])
-            
     p.loadURDF("duck_vhacd.urdf", [0, 0, 0.5], globalScaling=3.0, useFixedBase=True)
-    print("Arena Pronta.")
 
 def calcular_controle(robot_pos, robot_yaw, target_pos):
     dx = target_pos[0] - robot_pos[0]
@@ -270,17 +252,18 @@ def main():
             passos += 1
             energia += abs(vl) + abs(vr)
             
+            # Envia Telemetria a cada 50 frames
             if passos % 50 == 0:
                 dados = {
                     "modo": modo,
                     "area_m2": round(area_coberta * 0.04, 2),
                     "energia": int(energia),
-                    "progresso_rota": f"{wp_index}/{len(rota_inteligente)}" if modo == "AUTO" else "N/A",
                     "posicao": {"x": float(pos[0]), "y": float(pos[1])}
                 }
                 comunicador.enviar_telemetria(dados)
             
-            if passos % 200 == 0:
+            # Envia Imagem a cada 50 frames (Atualização suave)
+            if passos % 50 == 0:
                 comunicador.enviar_imagem(mapa, trajetoria_atual)
 
             p.stepSimulation()
