@@ -1,35 +1,47 @@
 [
     {
-        "id": "tab_husky_v26",
-        "type": "tab",
-        "label": "Husky Robot V26",
+        "id": "tab_husky_final",
+        "type": "ui_tab",
+        "name": "Painel Husky Final",
+        "icon": "dashboard",
+        "order": 1,
         "disabled": false,
-        "info": ""
+        "hidden": false
     },
     {
-        "id": "group_stats",
+        "id": "group_stats_final",
         "type": "ui_group",
         "name": "Estatísticas em Tempo Real",
-        "tab": "tab_home_v26",
+        "tab": "tab_husky_final",
         "order": 1,
         "disp": true,
         "width": "6",
         "collapse": false
     },
     {
-        "id": "group_maps",
+        "id": "group_maps_final",
         "type": "ui_group",
-        "name": "Visualização de Navegação",
-        "tab": "tab_home_v26",
+        "name": "Comparativo de Navegação",
+        "tab": "tab_husky_final",
         "order": 2,
         "disp": true,
         "width": "12",
         "collapse": false
     },
     {
-        "id": "mqtt_telemetria",
+        "id": "group_report_final",
+        "type": "ui_group",
+        "name": "Relatório de Melhoria (Execução 1 vs Execução 2)",
+        "tab": "tab_husky_final",
+        "order": 3,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "mqtt_in_telemetria",
         "type": "mqtt in",
-        "z": "tab_husky_v26",
+        "z": "tab_husky_final",
         "name": "Recebe Telemetria",
         "topic": "aspirador/telemetria",
         "qos": "0",
@@ -39,19 +51,20 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 150,
-        "y": 140,
+        "x": 130,
+        "y": 100,
         "wires": [
             [
-                "func_distribuidor"
+                "func_distribuidor_final",
+                "func_logic_compare_final"
             ]
         ]
     },
     {
-        "id": "mqtt_imagem",
+        "id": "mqtt_in_imagem",
         "type": "mqtt in",
-        "z": "tab_husky_v26",
-        "name": "Recebe Imagem Mapa",
+        "z": "tab_husky_final",
+        "name": "Recebe Imagem",
         "topic": "aspirador/mapa_imagem",
         "qos": "0",
         "datatype": "auto",
@@ -60,69 +73,71 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 160,
-        "y": 420,
+        "x": 120,
+        "y": 300,
         "wires": [
             [
-                "ui_template_imagem"
+                "ui_template_img_final"
             ]
         ]
     },
     {
-        "id": "func_distribuidor",
+        "id": "func_distribuidor_final",
         "type": "function",
-        "z": "tab_husky_v26",
-        "name": "Distribuidor de Dados",
-        "func": "var dados = msg.payload;\n\n// 1. Dados para os Widgets Padrão\nvar msgModo = { payload: dados.modo };\nvar msgArea = { payload: dados.area_m2, topic: \"Área Coberta\" };\nvar msgEnergia = { payload: dados.energia };\n\n// 2. Dados para o Canvas (Mapa Tempo Real)\n// Envia apenas se tiver posição válida\nvar msgCanvas = null;\nif (dados.posicao && dados.posicao.x !== undefined) {\n    msgCanvas = {\n        payload: {\n            x: parseFloat(dados.posicao.x),\n            y: parseFloat(dados.posicao.y)\n        }\n    };\n}\n\nreturn [msgModo, msgArea, msgEnergia, msgCanvas];",
-        "outputs": 4,
+        "z": "tab_husky_final",
+        "name": "Distribui Dados",
+        "func": "var d = msg.payload;\n\n// Prepara dados para Canvas (X/Y)\nvar msgCanvas = null;\nif(d.posicao && d.posicao.x !== undefined){\n    msgCanvas = { payload: {x: d.posicao.x, y: d.posicao.y} };\n}\n\n// Eficiencia\nvar area = d.area_m2 || 1;\nvar efic = (d.energia / area).toFixed(0) + \" J/m²\";\n\nreturn [\n    {payload: d.modo}, \n    {payload: d.area_m2}, \n    {payload: d.energia}, \n    {payload: efic},\n    msgCanvas\n];",
+        "outputs": 5,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 400,
-        "y": 140,
+        "x": 360,
+        "y": 100,
         "wires": [
             [
-                "ui_text_modo"
+                "ui_text_modo_final"
             ],
             [
-                "ui_chart_area"
+                "ui_chart_area_final"
             ],
             [
-                "ui_gauge_energia",
-                "ui_text_eficiencia"
+                "ui_gauge_energy_final"
             ],
             [
-                "ui_template_canvas"
+                "ui_text_efic_final"
+            ],
+            [
+                "ui_template_canvas_final"
             ]
         ]
     },
     {
-        "id": "ui_text_modo",
+        "id": "ui_text_modo_final",
         "type": "ui_text",
-        "z": "tab_husky_v26",
-        "group": "group_stats",
+        "z": "tab_husky_final",
+        "group": "group_stats_final",
         "order": 1,
         "width": 0,
         "height": 0,
         "name": "",
-        "label": "Modo Atual:",
+        "label": "Modo:",
         "format": "{{msg.payload}}",
         "layout": "row-spread",
-        "x": 670,
-        "y": 60,
+        "x": 590,
+        "y": 40,
         "wires": []
     },
     {
-        "id": "ui_chart_area",
+        "id": "ui_chart_area_final",
         "type": "ui_chart",
-        "z": "tab_husky_v26",
-        "name": "Gráfico Área",
-        "group": "group_stats",
+        "z": "tab_husky_final",
+        "name": "",
+        "group": "group_stats_final",
         "order": 2,
         "width": 0,
         "height": 0,
-        "label": "Evolução da Área (m²)",
+        "label": "Área Coberta (m²)",
         "chartType": "line",
         "legend": "false",
         "xformat": "HH:mm:ss",
@@ -151,23 +166,23 @@
         "outputs": 1,
         "useDifferentColor": false,
         "className": "",
-        "x": 670,
-        "y": 120,
+        "x": 610,
+        "y": 80,
         "wires": [
             []
         ]
     },
     {
-        "id": "ui_gauge_energia",
+        "id": "ui_gauge_energy_final",
         "type": "ui_gauge",
-        "z": "tab_husky_v26",
+        "z": "tab_husky_final",
         "name": "",
-        "group": "group_stats",
+        "group": "group_stats_final",
         "order": 3,
         "width": 0,
         "height": 0,
         "gtype": "gage",
-        "title": "Energia (J)",
+        "title": "Energia",
         "label": "Joules",
         "format": "{{value}}",
         "min": 0,
@@ -180,34 +195,15 @@
         "seg1": "",
         "seg2": "",
         "className": "",
-        "x": 670,
-        "y": 180,
+        "x": 580,
+        "y": 120,
         "wires": []
     },
     {
-        "id": "ui_text_eficiencia",
-        "type": "function",
-        "z": "tab_husky_v26",
-        "name": "Calc Eficiência",
-        "func": "var energia = msg.payload;\n// Usa variável global ou um valor estimado se area for 0\nvar area = global.get(\"husky_area\") || 1;\nvar result = (energia / area).toFixed(0);\nmsg.payload = result + \" J/m²\";\nreturn msg;",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 680,
-        "y": 240,
-        "wires": [
-            [
-                "ui_text_eff_display"
-            ]
-        ]
-    },
-    {
-        "id": "ui_text_eff_display",
+        "id": "ui_text_efic_final",
         "type": "ui_text",
-        "z": "tab_husky_v26",
-        "group": "group_stats",
+        "z": "tab_husky_final",
+        "group": "group_stats_final",
         "order": 4,
         "width": 0,
         "height": 0,
@@ -215,60 +211,119 @@
         "label": "Eficiência:",
         "format": "{{msg.payload}}",
         "layout": "row-spread",
-        "x": 860,
-        "y": 240,
+        "x": 600,
+        "y": 160,
         "wires": []
     },
     {
-        "id": "ui_template_canvas",
+        "id": "ui_template_canvas_final",
         "type": "ui_template",
-        "z": "tab_husky_v26",
-        "group": "group_maps",
-        "name": "MAPA 1: Rastreador (Canvas)",
+        "z": "tab_husky_final",
+        "group": "group_maps_final",
+        "name": "Canvas (Rastreio)",
         "order": 1,
         "width": "6",
         "height": "8",
-        "format": "<div style=\"display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;\">\n    <h4 style=\"margin-bottom: 5px;\">Rastreio em Tempo Real</h4>\n    <canvas id=\"mapaCanvasV26\" width=\"300\" height=\"300\" style=\"background-color: #000; border: 2px solid #00FFFF; border-radius: 4px;\"></canvas>\n    <div style=\"color: gray; font-size: 10px; margin-top: 5px;\">Escala: 20x20 metros</div>\n</div>\n\n<script>\n    (function(scope) {\n        setTimeout(function() {\n            const canvas = document.getElementById('mapaCanvasV26');\n            if(!canvas) return;\n            \n            const ctx = canvas.getContext('2d');\n            const mapSize = 300;\n            const realSize = 20; // Arena de -10 a 10 (20 metros)\n            \n            // Função para converter Metros -> Pixels\n            function toPx(val) {\n                // Transforma -10..10 em 0..300\n                return ((val + 10) / realSize) * mapSize;\n            }\n\n            // Desenha grade de fundo (opcional)\n            ctx.strokeStyle = '#222';\n            ctx.lineWidth = 1;\n            ctx.beginPath();\n            for(let i=0; i<=300; i+=30) {\n                ctx.moveTo(i, 0); ctx.lineTo(i, 300);\n                ctx.moveTo(0, i); ctx.lineTo(300, i);\n            }\n            ctx.stroke();\n\n            scope.$watch('msg', function(msg) {\n                if (!msg || !msg.payload) return;\n                \n                // Desenha o Robô (Ponto Ciano)\n                const x = toPx(msg.payload.x);\n                const y = toPx(msg.payload.y);\n                \n                // Inverte Y porque no Canvas o 0 é em cima\n                const yInv = mapSize - y;\n\n                ctx.beginPath();\n                ctx.arc(x, yInv, 2, 0, 2 * Math.PI);\n                ctx.fillStyle = '#00FFFF'; // Ciano Brilhante\n                ctx.fill();\n            });\n        }, 100); // Pequeno delay para garantir que o DOM carregou\n    })(scope);\n</script>",
+        "format": "<div style=\"text-align:center;\">\n    <h4>Rastreio em Tempo Real</h4>\n    <canvas id=\"finalCanvas\" width=\"300\" height=\"300\" style=\"background:#000; border:2px solid cyan;\"></canvas>\n</div>\n<script>\n(function(scope){\n    setTimeout(function(){\n        const c = document.getElementById('finalCanvas');\n        if(!c) return;\n        const ctx = c.getContext('2d');\n        \n        // Desenha grade inicial\n        ctx.strokeStyle = '#222';\n        ctx.beginPath();\n        for(let i=0;i<=300;i+=30){ ctx.moveTo(i,0); ctx.lineTo(i,300); ctx.moveTo(0,i); ctx.lineTo(300,i); }\n        ctx.stroke();\n\n        function toPx(val) { return ((val + 10) / 20) * 300; }\n\n        scope.$watch('msg', function(msg){\n            if(!msg || !msg.payload) return;\n            const x = toPx(msg.payload.x);\n            const y = 300 - toPx(msg.payload.y);\n            \n            ctx.fillStyle = '#00FFFF';\n            ctx.beginPath();\n            ctx.arc(x, y, 2, 0, 2*Math.PI);\n            ctx.fill();\n        });\n    }, 200);\n})(scope);\n</script>",
         "storeOutMessages": true,
         "fwdInMessages": true,
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 670,
-        "y": 320,
+        "x": 610,
+        "y": 200,
         "wires": [
             []
         ]
     },
     {
-        "id": "ui_template_imagem",
+        "id": "ui_template_img_final",
         "type": "ui_template",
-        "z": "tab_husky_v26",
-        "group": "group_maps",
-        "name": "MAPA 2: Completo (Imagem)",
+        "z": "tab_husky_final",
+        "group": "group_maps_final",
+        "name": "Imagem (Mapa)",
         "order": 2,
         "width": "6",
         "height": "8",
-        "format": "<div style=\"display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;\">\n    <h4 style=\"margin-bottom: 5px;\">Mapa de Calor & Obstáculos</h4>\n    <div style=\"width: 300px; height: 300px; border: 2px solid #FF5500; background: #000; display: flex; align-items: center; justify-content: center;\">\n        <img ng-src=\"data:image/png;base64,{{msg.payload}}\" alt=\"Aguardando Imagem...\" style=\"max-width: 100%; max-height: 100%; object-fit: contain;\">\n    </div>\n    <div style=\"color: gray; font-size: 10px; margin-top: 5px;\">Fonte: Matplotlib (Python)</div>\n</div>",
+        "format": "<div style=\"text-align:center;\">\n    <h4>Mapa de Calor & Obstáculos</h4>\n    <div style=\"width:300px; height:300px; background:#000; margin:auto; border:2px solid orange; display:flex; align-items:center; justify-content:center;\">\n        <img ng-src=\"data:image/png;base64,{{msg.payload}}\" style=\"max-width:100%; max-height:100%;\">\n    </div>\n</div>",
         "storeOutMessages": true,
         "fwdInMessages": true,
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 440,
+        "x": 360,
+        "y": 300,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "func_logic_compare_final",
+        "type": "function",
+        "z": "tab_husky_final",
+        "name": "Lógica Comparador",
+        "func": "var ctx = global;\nvar d = msg.payload;\n\n// Se veio do botão SAVE\nif (msg.topic === \"save_cmd\") {\n    var last = ctx.get(\"husky_current\") || {};\n    ctx.set(\"husky_ref\", last);\n    return { payload: { refresh: true } }; // Força atualização\n}\n\n// Se é dado de telemetria\nif (!d || !d.energia) return null;\n\nvar area = d.area_m2 || 1;\nvar energia = d.energia;\nvar efic = energia / area;\n\n// Salva atual\nvar cur = { en: energia, ef: efic };\nctx.set(\"husky_current\", cur);\n\n// Pega referência\nvar ref = ctx.get(\"husky_ref\");\n\n// Monta objeto para tabela\nvar out = {\n    c_en: energia,\n    c_ef: efic.toFixed(0),\n    r_en: \"--\",\n    r_ef: \"--\",\n    d_en: 0,\n    d_ef: 0\n};\n\nif(ref) {\n    out.r_en = ref.en;\n    out.r_ef = ref.ef.toFixed(0);\n    // Calcula melhoria %\n    if(ref.en > 0) out.d_en = ((ref.en - energia)/ref.en * 100).toFixed(1);\n    if(ref.ef > 0) out.d_ef = ((ref.ef - efic)/ref.ef * 100).toFixed(1);\n}\n\nreturn { payload: out };",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 420,
+        "wires": [
+            [
+                "ui_template_table_final"
+            ]
+        ]
+    },
+    {
+        "id": "ui_button_save_final",
+        "type": "ui_button",
+        "z": "tab_husky_final",
+        "name": "",
+        "group": "group_report_final",
+        "order": 1,
+        "width": "4",
+        "height": "2",
+        "passthru": false,
+        "label": "SALVAR REFERÊNCIA",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "fa-save",
+        "payload": "save",
+        "payloadType": "str",
+        "topic": "save_cmd",
+        "topicType": "str",
+        "x": 130,
+        "y": 460,
+        "wires": [
+            [
+                "func_logic_compare_final"
+            ]
+        ]
+    },
+    {
+        "id": "ui_template_table_final",
+        "type": "ui_template",
+        "z": "tab_husky_final",
+        "group": "group_report_final",
+        "name": "Tabela HTML",
+        "order": 2,
+        "width": "8",
+        "height": "4",
+        "format": "<style>\n    table { width: 100%; border-collapse: collapse; color: #ddd; }\n    th, td { border: 1px solid #444; padding: 5px; text-align: center; }\n    th { background: #333; color: cyan; }\n    .good { color: lime; font-weight: bold; }\n</style>\n<table>\n    <tr>\n        <th>Métrica</th>\n        <th>1ª Volta (Ref)</th>\n        <th>Volta Atual</th>\n        <th>Melhoria</th>\n    </tr>\n    <tr>\n        <td>Energia</td>\n        <td>{{msg.payload.r_en}}</td>\n        <td>{{msg.payload.c_en}}</td>\n        <td ng-class=\"{'good': msg.payload.d_en > 0}\">{{msg.payload.d_en}}%</td>\n    </tr>\n    <tr>\n        <td>Eficiência</td>\n        <td>{{msg.payload.r_ef}}</td>\n        <td>{{msg.payload.c_ef}}</td>\n        <td ng-class=\"{'good': msg.payload.d_ef > 0}\">{{msg.payload.d_ef}}%</td>\n    </tr>\n</table>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 610,
         "y": 420,
         "wires": [
             []
         ]
-    },
-    {
-        "id": "tab_home_v26",
-        "type": "ui_tab",
-        "name": "Husky Dashboard V26",
-        "icon": "dashboard",
-        "order": 1,
-        "disabled": false,
-        "hidden": false
     },
     {
         "id": "broker_local",
